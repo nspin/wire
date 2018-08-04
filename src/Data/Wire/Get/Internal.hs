@@ -35,18 +35,18 @@ data PartialResult r =
 type Result r = Either Failure r
 
 data Failure = Failure ByteString [String] String
-data Partial r = Partial Int (ByteString -> PartialResult r)
+data Partial r = Partial [String] Int (ByteString -> PartialResult r)
 
 type SuccessK a r = ByteString -> a -> PartialResult r
 
 instance Show Failure where
-    show (Failure b ctx msg) = "Failure _ " ++ show ctx ++ " " ++ show msg -- TODO
+    show (Failure b ctx msg) = "Failure _ " ++ show ctx ++ " " ++ show msg
 
 instance Show (Partial r) where
-    show (Partial n k) = "Partial " ++ show n ++ " _" -- TODO
+    show (Partial ctx n k) = "Partial _ " ++ show n ++ " _"
 
 instance Functor Partial where
-    fmap f (Partial n k) = Partial n (fmap (fmap f) k)
+    fmap f (Partial ctx n k) = Partial ctx n (fmap (fmap f) k)
 
 instance Functor Get where
     fmap f (Get n p) = Get n $ \b0 ctx ks ->
@@ -74,7 +74,7 @@ instance Monad Get where
     Get xn xp >>= f = Get xn $ \b0 ctx ks ->
                              xp b0 ctx $ \b1 a ->
                                 let Get yn yp = f a
-                                in PartialR (Partial yn (\b2 -> yp b2 ctx ks))
+                                in PartialR (Partial ctx yn (\b2 -> yp b2 ctx ks))
 
     {-# INLINE (>>) #-}
     (>>) = (*>)
@@ -92,15 +92,15 @@ successK b = if B.null b then SuccessR else error "Data.Wire.Get.Internal: user 
 
 runGetPartial :: Get a -> Partial a
 runGetPartial (Get 0 _) = error "Data.Message.Get.Internal: user error: cannot run empty parser"
-runGetPartial (Get n p) = Partial n (\b -> p b [] successK)
+runGetPartial (Get n p) = Partial [] n (\b -> p b [] successK)
 
 runGet :: Monad m => Get a -> (Int -> m ByteString) -> m (Result a)
 runGet g m = go (runGetPartial g)
   where
-    go (Partial n ks) = do
+    go (Partial ctx n ks) = do
         b <- m n
         if B.null b
-            then return (Left (notEnoughInput [])) -- TODO where is the ctx
+            then return (Left (notEnoughInput ctx))
             else case ks b of
                 FailureR fl -> return (Left fl)
                 SuccessR a -> return (Right a)
@@ -109,10 +109,10 @@ runGet g m = go (runGetPartial g)
 runGetMaybe :: Monad m => Get a -> (Int -> m (Maybe ByteString)) -> m (Result a)
 runGetMaybe g m = go (runGetPartial g)
   where
-    go (Partial n ks) = do
+    go (Partial ctx n ks) = do
         mb <- m n
         case mb of
-            Nothing -> return (Left (notEnoughInput [])) -- TODO where is the ctx
+            Nothing -> return (Left (notEnoughInput ctx))
             Just b -> case ks b of
                 FailureR fl -> return (Left fl)
                 SuccessR a -> return (Right a)
@@ -133,14 +133,14 @@ skip n = Get n (go n)
         in case compare n1 0 of
             EQ -> ks mempty ()
             LT -> ks (B.drop n0 b0) ()
-            GT -> PartialR (Partial n1 (\b1 -> go n1 b1 ctx ks))
+            GT -> PartialR (Partial ctx n1 (\b1 -> go n1 b1 ctx ks))
 
 getByte :: Get Word8
 getByte = Get 1 go
   where
     go b0 ctx ks = case B.uncons b0 of
         Just (w, b1) -> ks b1 w
-        Nothing -> PartialR (Partial 1 (\b1 -> go b1 ctx ks))
+        Nothing -> PartialR (Partial ctx 1 (\b1 -> go b1 ctx ks))
 
 getBytes :: Int -> Get Builder
 getBytes n = Get n (go mempty n)
@@ -150,7 +150,7 @@ getBytes n = Get n (go mempty n)
         in case compare n1 0 of
             EQ -> ks mempty (byteString b0 <> acc)
             LT -> uncurry ks $ byteString <$> B.splitAt n0 b0
-            GT -> PartialR (Partial n1 (\b1 -> go (byteString b0 <> acc) n1 b1 ctx ks))
+            GT -> PartialR (Partial ctx n1 (\b1 -> go (byteString b0 <> acc) n1 b1 ctx ks))
 
 matchBytes :: ByteString -> Get ()
 matchBytes b = Get (B.length b) (go b)
@@ -164,7 +164,7 @@ matchBytes b = Get (B.length b) (go b)
                 Just b1 -> ks b1 ()
             GT -> case B.stripPrefix b0 br of
                 Nothing -> FailureR (Failure b ctx "match bytes")
-                Just br' -> PartialR (Partial n1 (\b1 -> go br' b1 ctx ks))
+                Just br' -> PartialR (Partial ctx n1 (\b1 -> go br' b1 ctx ks))
 
 {-# INLINE getByte #-}
 {-# INLINE getBytes #-}
