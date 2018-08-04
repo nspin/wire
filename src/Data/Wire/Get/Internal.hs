@@ -135,6 +135,8 @@ skip n = Get n (go n)
             LT -> ks (B.drop n0 b0) ()
             GT -> PartialR (Partial ctx n1 (\b1 -> go n1 b1 ctx ks))
 
+-- TODO: match :: Get a -> Get (Builder, a)
+
 getByte :: Get Word8
 getByte = Get 1 go
   where

@@ -25,6 +25,7 @@ module Data.Wire.Get
 import Control.Monad
 import Control.Monad.Trans.State.Strict
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder
 import Data.Wire.Get.Internal
 import Data.Word (Word8)
 import qualified Data.ByteString as B
@@ -43,6 +44,12 @@ formatFailure (Failure b ctx msg) = unlines $
   where
     buf = if B.null no then show yes else show yes <> " (" <> show (B.length no) <> " not shown)"
     (yes, no) = B.splitAt 8 b
+
+getBytesStrict :: Int -> Get ByteString
+getBytesStrict n = L.toStrict <$> getBytesLazy n
+
+getBytesLazy :: Int -> Get L.ByteString
+getBytesLazy n = toLazyByteString <$> getBytes n
 
 runGetStrict :: Get a -> ByteString -> (Result a, ByteString)
 runGetStrict g = runState (runGet g m)
