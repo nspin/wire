@@ -13,7 +13,11 @@ library
   ghc-options:        -Wall -fwarn-tabs -fno-warn-unused-matches
 
   exposed-modules:    Data.Wire.Get
+                      Data.Wire.Get.Monad
+                      Data.Wire.Get.Buffer
+                      Data.Wire.Get.Buffer.Internal
                       Data.Wire.Get.ByteString
+                      Data.Wire.Get.ByteString.Internal
 
   build-depends:      base >=4.8 && <5
                     , bytestring

@@ -3,6 +3,7 @@
 module Main (main) where
 
 import Data.Wire.Get
+import Data.Wire.Get.Buffer
 import Data.Wire.Get.ByteString
 
 main :: IO ()
