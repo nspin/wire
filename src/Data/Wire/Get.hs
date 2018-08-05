@@ -11,9 +11,14 @@ module Data.Wire.Get
     -- * Debugging 'Get's
     , formatFailure
 
+    , (<&>)
+    , (<**>)
     ) where
 
 import Data.Wire.Get.Monad
+
+import Data.Functor
+import Control.Applicative
 
 import Data.ByteString.Builder
 import qualified Data.ByteString as B

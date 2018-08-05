@@ -7,6 +7,7 @@ module Data.Wire.Get.ByteString
     , runGetOnMaybe
     -- * Debugging 'Get's
     , runGetStrict
+    , runGetChunks
     , runGetLazy
     ) where
 
@@ -27,8 +28,8 @@ runGetStrict = S.runState . runGetOn m
             then return mempty
             else S.state (B.splitAt n)
 
-runGetLazy :: Get a -> L.ByteString -> (Result a, L.ByteString)
-runGetLazy g lbs = L.fromChunks . uncurry (:) <$> S.runState (runGetOn m g) (mempty, L.toChunks lbs)
+runGetChunks :: Get a -> [B.ByteString] -> (Result a, [B.ByteString])
+runGetChunks g chunks = (filter (not . B.null) . uncurry (:)) <$> S.runState (runGetOn m g) (mempty, chunks)
   where
     m n = do
         (sst, lst) <- S.get
@@ -38,3 +39,6 @@ runGetLazy g lbs = L.fromChunks . uncurry (:) <$> S.runState (runGetOn m g) (mem
             (False, _) ->
                 let (s, sst') = B.splitAt n sst
                 in s <$ S.put (sst', lst)
+
+runGetLazy :: Get a -> L.ByteString -> (Result a, L.ByteString)
+runGetLazy g lbs = L.fromChunks <$> runGetChunks g (L.toChunks lbs)

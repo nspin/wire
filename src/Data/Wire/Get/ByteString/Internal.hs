@@ -22,7 +22,6 @@ import Foreign.Storable
 import qualified Data.ByteString as B
 import qualified Control.Monad
 
-
 data Get a = Get Int (forall r. ByteString -> [String] -> SuccessK a r -> PartialResult r)
 
 type SuccessK a r = ByteString -> a -> PartialResult r
@@ -144,9 +143,9 @@ instance MonadGet Get where
         go acc n0 b0 ctx ks =
             let n1 = n0 - B.length b0
             in case compare n1 0 of
-                EQ -> ks mempty (byteString b0 <> acc)
+                EQ -> ks mempty (acc <> byteString b0)
                 LT -> uncurry ks $ byteString <$> B.splitAt n0 b0
-                GT -> PartialR (Partial ctx n1 (\b1 -> go (byteString b0 <> acc) n1 b1 ctx ks))
+                GT -> PartialR (Partial ctx n1 (\b1 -> go (acc <> byteString b0) n1 b1 ctx ks))
 
     {-# INLINE getStorable #-}
     getStorable :: Storable a => Get a

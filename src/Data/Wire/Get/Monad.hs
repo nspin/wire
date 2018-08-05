@@ -23,9 +23,10 @@ class (Monad m, MonadFail m) => MonadGet m where
 type Result r = Either Failure r
 
 data Failure = Failure ByteString [String] String
+    deriving (Eq)
 
 instance Show Failure where
     show (Failure b ctx msg) = "Failure _ " ++ show ctx ++ " " ++ show msg
 
 notEnoughInput :: [String] -> Failure
-notEnoughInput ctx = Failure mempty ctx "not enough"
+notEnoughInput ctx = Failure mempty ctx "not enough input"
